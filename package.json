@@ -4,6 +4,18 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "google-spreadsheet": "^3.3.0"
+    "dotenv": "^16.0.3",
+    "google-spreadsheet": "^3.3.0",
+    "typescript": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/google-spreadsheet": "^3.3.1",
+    "@types/node": "^18.16.0",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node -r tsconfig-paths/register src/main.ts"
   }
 }
