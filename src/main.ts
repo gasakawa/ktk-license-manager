@@ -1,46 +1,75 @@
-import { GoogleSheetHelper } from 'helpers/google-sheet-helper';
 import 'dotenv/config';
-import { CryptoHelper } from 'helpers/crypto.helper';
+import { format, parse } from 'date-fns';
+import { GoogleSheetHelper } from 'helpers/google-sheet-helper';
+import { GoogleSpreadsheet, GoogleSpreadsheetRow } from 'google-spreadsheet';
+import { ValidationHelper } from 'helpers/validation.helper';
+import { SubscriptionBuilder } from 'builders/subscription.builder';
+import Logger from 'config/logger';
+import LicenseModel from 'model/license.model';
+import { FileHelper } from 'helpers/file.helper';
+import { mkdir } from 'fs/promises';
+import { resolve } from 'path';
+class Main {
+  private _log = Logger.getInstance().log;
+  private _timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
 
-async function main() {
-  // const document = await GoogleSheetHelper.getDocument(
-  //   process.env.GOOGLE_SHEET_FILE_ID,
-  // );
-  // document.sheetsByIndex[0].getRows().then(rows => {
-  //   console.log(
-  //     '🚀 ~ file: main.ts:12 ~ document.sheetsByIndex[0].getRows ~ rows[0]:',
-  //     rows[0].Sequence_ID,
-  //   );
-  // });
-  const productName = CryptoHelper.stringToHash('Edge-Bot', 'sha256');
-  // console.log(`product hash ${productName}`);
-  const customerId = CryptoHelper.stringToHash(
-    'cowracapital@gmail.com',
-    'sha256',
-  );
-  // console.log(`customer hash ${customerId}`);
-  const accountId = CryptoHelper.stringToHash('1057100982', 'sha256');
+  async getDocument(): Promise<GoogleSpreadsheet> {
+    return await GoogleSheetHelper.getDocument(
+      process.env.GOOGLE_SHEET_FILE_ID,
+    );
+  }
 
-  const payload = `v1.0\n${productName}\n${customerId}\n${accountId}\n2023.04.30\n2023.06.14\n[...]`;
+  async getRows(document: GoogleSpreadsheet): Promise<GoogleSpreadsheetRow[]> {
+    const sheet = document.sheetsByIndex[0];
 
-  const secret = '17abd5b523f1b2b4abec41ae9893d610';
+    if (!(await ValidationHelper.validateHeader(sheet))) {
+      this._log.error(
+        `Error validating Google Sheet source, the columns in incorrect order or missing`,
+      );
+      process.exit(1);
+    }
 
-  const rev_secret = CryptoHelper.stringToHash(
-    secret.split('').reverse().join(''),
-    'md5',
-  );
+    await mkdir(resolve(__dirname, '..', `files`, `${this._timestamp}`));
 
-  const key_string = `${secret}\n${payload}\n${rev_secret}`;
+    return await sheet.getRows();
+  }
 
-  const signature = CryptoHelper.stringToHash(key_string, 'sha256');
+  async processRows(rows: GoogleSpreadsheetRow[]): Promise<void> {
+    for (const row of rows) {
+      this._log.info(`Generating license for account ${row['Account']}`);
+      const subscription = new SubscriptionBuilder()
+        .setSequenceId(row['Sequence_ID'])
+        .setFullName(row['Full_Name'])
+        .setEmailAddress(row['Email_Address'])
+        .setProductName(row['Product_Name'])
+        .setDate(new Date(row['Date']))
+        .setMonths(Number(row['Months']))
+        .setBroker(row['Broker'])
+        .setAccount(row['Account'])
+        .build();
 
-  const license = `${signature}\n${payload}`;
-  // const payloadHash = CryptoHelper.stringToHash(payload, 'sha256');
-  console.log(license);
+      const licenseModel = new LicenseModel(subscription);
+      const license = licenseModel.generateLicense();
 
-  // console.log(
-  //   `${payloadHash}\nv1.0\n${productName}\n${customerId}\n${accountId}\n2023.04.30\n2023.06.14\n[...]`,
-  // );
+      FileHelper.writeLicenseFile(
+        this._timestamp,
+        licenseModel.getProductNameHash(),
+        licenseModel.getAccountIdHash(),
+        licenseModel.getCustomerIdHash(),
+        subscription.getAccount(),
+        license,
+      );
+    }
+  }
+
+  async run(): Promise<void> {
+    this._log.info(`Starting license generation`);
+    const document = await this.getDocument();
+
+    const rows = await this.getRows(document);
+
+    await this.processRows(rows);
+  }
 }
 
-main();
+new Main().run();
