@@ -1,4 +1,7 @@
-import { GoogleSpreadsheetWorksheet } from 'google-spreadsheet';
+import {
+  GoogleSpreadsheetRow,
+  GoogleSpreadsheetWorksheet,
+} from 'google-spreadsheet';
 
 export class ValidationHelper {
   static async validateHeader(
@@ -26,5 +29,15 @@ export class ValidationHelper {
     }
 
     return isOk;
+  }
+
+  static async validateMandatoryFields(
+    row: GoogleSpreadsheetRow,
+  ): Promise<string> {
+    if (!row['Date']) {
+      return 'Date';
+    }
+
+    return '';
   }
 }

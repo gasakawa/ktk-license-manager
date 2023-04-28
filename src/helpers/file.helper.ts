@@ -1,24 +1,40 @@
-import { resolve } from 'path';
-import { writeFileSync } from 'fs';
+import { resolve as resolvePath } from 'path';
+import { writeFile } from 'fs/promises';
 import Logger from 'config/logger';
 
 export class FileHelper {
   private static _log = Logger.getInstance().log;
 
-  static writeLicenseFile(
+  static async writeLicenseFile(
     prefix: string,
     product: string,
     account: string,
     customer: string,
     accountId: string,
     payload: string,
-  ): void {
-    const filename = `${product}_${account}_${customer}`;
-    writeFileSync(
-      resolve(__dirname, '..', '..', 'files', `${prefix}`, `${filename}.lic`),
-      payload,
-    );
+  ): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const filename = `${product}_${account}_${customer}`;
+        await writeFile(
+          resolvePath(
+            __dirname,
+            '..',
+            '..',
+            'files',
+            `${prefix}`,
+            `${filename}.lic`,
+          ),
+          payload,
+        );
 
-    this._log.info(`License file for account ${accountId}: ${filename}.lic`);
+        this._log.info(
+          `License file for account ${accountId}: ${filename}.lic`,
+        );
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 }

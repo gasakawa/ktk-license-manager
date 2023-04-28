@@ -36,7 +36,23 @@ class Main {
 
   async processRows(rows: GoogleSpreadsheetRow[]): Promise<void> {
     for (const row of rows) {
-      this._log.info(`Generating license for account ${row['Account']}`);
+      if (String(row['License_Generated']).toLocaleLowerCase() === 'yes') {
+        this._log.info(
+          `Row ${row.rowIndex}: The account ${row['Account']} already has a license generated`,
+        );
+        continue;
+      }
+
+      const mandatoryValidationValue =
+        await ValidationHelper.validateMandatoryFields(row);
+
+      if (mandatoryValidationValue !== '') {
+        this._log.error(
+          `Row ${row.rowIndex}: Some mandatory values are missing [${mandatoryValidationValue}]`,
+        );
+        continue;
+      }
+
       const subscription = new SubscriptionBuilder()
         .setSequenceId(row['Sequence_ID'])
         .setFullName(row['Full_Name'])
@@ -51,7 +67,11 @@ class Main {
       const licenseModel = new LicenseModel(subscription);
       const license = licenseModel.generateLicense();
 
-      FileHelper.writeLicenseFile(
+      this._log.info(
+        `Row ${row.rowIndex}: Generating license for account ${row['Account']}`,
+      );
+
+      await FileHelper.writeLicenseFile(
         this._timestamp,
         licenseModel.getProductNameHash(),
         licenseModel.getAccountIdHash(),
@@ -59,6 +79,9 @@ class Main {
         subscription.getAccount(),
         license,
       );
+
+      row['License_Generated'] = 'YES';
+      await row.save();
     }
   }
 
