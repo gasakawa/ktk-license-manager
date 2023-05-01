@@ -34,8 +34,19 @@ export class ValidationHelper {
   static async validateMandatoryFields(
     row: GoogleSpreadsheetRow,
   ): Promise<string> {
-    if (!row['Date']) {
-      return 'Date';
+    const mandatoryFields = [
+      'Email_Address',
+      'Product_Name',
+      'Date',
+      'Months',
+      'Broker',
+      'Account',
+    ];
+
+    const missingFields = mandatoryFields.filter(field => !row[field]);
+
+    if (missingFields.length > 0) {
+      return missingFields.join(';');
     }
 
     return '';
