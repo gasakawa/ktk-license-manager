@@ -9,9 +9,6 @@ export class FileHelper {
   static async writeLicenseFile(
     filename: string,
     prefix: string,
-    product: string,
-    account: string,
-    customer: string,
     accountId: string,
     payload: string,
   ): Promise<void> {

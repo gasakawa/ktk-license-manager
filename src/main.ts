@@ -56,7 +56,7 @@ class Main {
       const subscription = new SubscriptionBuilder()
         .setSequenceId(row['Sequence_ID'])
         .setFullName(row['Full_Name'])
-        .setEmailAddress(row['Account'])
+        .setEmailAddress(row['Email_Address'])
         .setProductName(row['Product_Name'])
         .setDate(new Date(row['Date']))
         .setMonths(Number(row['Months']))
@@ -71,14 +71,11 @@ class Main {
         `Row ${row.rowIndex}: Generating license for account ${row['Account']}`,
       );
 
-      const filename = `${row['Product_Name']}_${row['Account']}_${row['Account']}`
+      const filename = `${row['Product_Name']}_${row['Account']}_${row['Email_Address']}`
 
       await FileHelper.writeLicenseFile(
         filename,
         this._timestamp,
-        licenseModel.getProductNameHash(),
-        licenseModel.getAccountIdHash(),
-        licenseModel.getCustomerIdHash(),
         subscription.getAccount(),
         license,
       );
