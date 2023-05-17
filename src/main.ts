@@ -9,6 +9,8 @@ import LicenseModel from 'model/license.model';
 import { FileHelper } from 'helpers/file.helper';
 import { mkdir } from 'fs/promises';
 import { resolve } from 'path';
+import { GistHelper } from 'helpers/gist.helper';
+import { CryptoHelper } from 'helpers/crypto.helper';
 class Main {
   private _log = Logger.getInstance().log;
   private _timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
@@ -80,8 +82,14 @@ class Main {
         license,
       );
 
-      row['License_Generated'] = 'YES';
-      await row.save();
+      try {
+        await GistHelper.updateGist(`${CryptoHelper.stringToHash(filename,'sha256')}.lic`, license)
+        row['License_Generated'] = 'YES';
+        await row.save();
+      }catch (err) {
+        this._log.error(`Error updating gist with file ${filename}: ${err.message}`)
+      }
+
     }
   }
 
