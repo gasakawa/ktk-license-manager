@@ -38,7 +38,7 @@ class Main {
 
   async processRows(rows: GoogleSpreadsheetRow[]): Promise<void> {
     for (const row of rows) {
-      if (String(row['License_Generated']).toLocaleLowerCase() === 'yes') {
+      if (row['License_Generated']) {
         this._log.info(
           `Row ${row.rowIndex}: The account ${row['Account']} already has a license generated`,
         );
@@ -75,16 +75,19 @@ class Main {
 
       const filename = `${row['Product_Name']}_${row['Account']}_${row['Email_Address']}`
 
-      await FileHelper.writeLicenseFile(
-        filename,
-        this._timestamp,
-        subscription.getAccount(),
-        license,
-      );
+      
 
       try {
         await GistHelper.updateGist(`${CryptoHelper.stringToHash(filename,'sha256')}.lic`, license)
-        row['License_Generated'] = 'YES';
+
+        await FileHelper.writeLicenseFile(
+          filename,
+          this._timestamp,
+          subscription.getAccount(),
+          license,
+        );
+
+        row['License_Generated'] = this._timestamp;
         await row.save();
       }catch (err) {
         this._log.error(`Error updating gist with file ${filename}: ${err.message}`)
